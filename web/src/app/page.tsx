@@ -32,38 +32,53 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen pb-6">
       <Header head={hub.head} />
-      <StatsBar taskCount={taskCount} agents={agents} lifecycleBlocks={hub.lifecycleBlocks} feed={hub.feed} />
 
-      {hub.error ? (
-        <div className="mx-4 mb-2 rounded border border-bad/40 bg-bad/10 px-3 py-2 text-xs text-bad">
-          RPC error: {hub.error} (check NEXT_PUBLIC_HUB_ADDRESS / RPC)
+      <div className="mx-auto w-full max-w-[1560px] px-4">
+        <StatsBar
+          taskCount={taskCount}
+          agents={agents}
+          lifecycleBlocks={hub.lifecycleBlocks}
+          feed={hub.feed}
+        />
+
+        {hub.error ? (
+          <div className="mb-3 rounded-lg border border-bad/40 bg-bad/10 px-3 py-2 text-xs text-bad">
+            RPC error: {hub.error} (check NEXT_PUBLIC_HUB_ADDRESS / RPC)
+          </div>
+        ) : null}
+
+        {!hub.ready ? (
+          <div className="card flex min-h-[320px] items-center justify-center text-sm text-mute">
+            connecting to Monad…
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 lg:h-[calc(100vh-19.5rem)] lg:min-h-[560px] lg:grid-cols-[300px_minmax(0,1fr)_360px]">
+            <aside className="flex min-h-0 flex-col gap-4 lg:overflow-y-auto lg:pr-1">
+              <AgentGraph agents={agents} feed={hub.feed} nameOf={nameOf} />
+              <Leaderboard agents={agents} nameOf={nameOf} />
+            </aside>
+
+            <section className="flex min-h-[60vh] flex-col lg:min-h-0">
+              <Terminal feed={hub.feed} nameOf={nameOf} thoughts={thoughts} agents={agents} />
+            </section>
+
+            <section className="flex min-h-[50vh] flex-col lg:min-h-0">
+              <div className="mb-2 flex items-center justify-between">
+                <h2 className="label">Task board</h2>
+                <span className="text-[10px] text-mute">latest 10</span>
+              </div>
+              <div className="min-h-0 flex-1 lg:overflow-y-auto lg:pr-1">
+                <TaskBoard tasks={hub.tasks} nameOf={nameOf} />
+              </div>
+            </section>
+          </div>
+        )}
+
+        <div className="mt-4">
+          <PostTaskPanel />
         </div>
-      ) : null}
-
-      {!hub.ready ? (
-        <div className="mx-4 rounded-lg border border-edge bg-panel p-8 text-sm text-mute">connecting to Monad…</div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[320px_1fr_380px]">
-          <div className="flex flex-col gap-4">
-            <AgentGraph agents={agents} feed={hub.feed} nameOf={nameOf} />
-            <Leaderboard agents={agents} nameOf={nameOf} />
-          </div>
-
-          <div className="flex min-h-[60vh] flex-col">
-            <Terminal feed={hub.feed} nameOf={nameOf} thoughts={thoughts} agents={agents} />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <div className="text-[10px] uppercase tracking-widest text-mute">Task board</div>
-            <TaskBoard tasks={hub.tasks} nameOf={nameOf} />
-          </div>
-        </div>
-      )}
-
-      <div className="px-4 pb-6">
-        <PostTaskPanel />
       </div>
     </main>
   );

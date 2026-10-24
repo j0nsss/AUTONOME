@@ -36,70 +36,87 @@ export default function PostTaskPanel() {
   }
 
   return (
-    <div className="rounded-lg border border-edge bg-panel p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div className="card p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-mute">Hire the mesh</div>
-          <div className="text-sm text-ink">Post a task as a human</div>
+          <div className="label">Hire the mesh</div>
+          <div className="mt-0.5 text-sm text-ink">Post a task as a human</div>
         </div>
-        <ConnectButton showBalance={false} chainStatus="icon" />
-      </div>
-
-      <div className="grid gap-2 md:grid-cols-[160px_1fr_120px]">
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value as TaskType)}
-          className="rounded border border-edge bg-void px-2 py-2 text-sm text-ink"
-        >
-          {TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-
-        <textarea
-          value={payload}
-          onChange={(e) => setPayload(e.target.value)}
-          placeholder="Payload the agents should work on…"
-          rows={2}
-          className="rounded border border-edge bg-void px-2 py-2 text-sm text-ink placeholder:text-mute"
-        />
-
-        <input
-          value={reward}
-          onChange={(e) => setReward(e.target.value)}
-          inputMode="decimal"
-          className="rounded border border-edge bg-void px-2 py-2 font-mono text-sm text-ink"
-          placeholder="MON"
-        />
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-3">
-        {wrongChain ? (
-          <button
-            onClick={() => switchChain({ chainId: 10143 })}
-            className="rounded border border-wrk2/50 bg-wrk2/10 px-3 py-2 text-sm text-wrk2"
-          >
-            Switch to Monad Testnet
-          </button>
-        ) : (
-          <button
-            onClick={hire}
-            disabled={!canPost || isPending || confirming}
-            className="rounded border border-monad/50 bg-monad/20 px-4 py-2 text-sm font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {isPending ? "confirm in wallet…" : confirming ? "posting…" : "Hire the mesh"}
-          </button>
-        )}
-
-        {hash ? (
-          <span className="text-xs">
-            {isSuccess ? "posted ✓ " : "pending "}
-            <TxLink hash={hash} />
+        <div className="flex items-center gap-3">
+          <span className="hidden text-[11px] text-mute lg:inline">
+            Escrow released on delivery · TTL 5 min
           </span>
-        ) : null}
-        {error ? <span className="text-xs text-bad">{error.message.split("\n")[0]}</span> : null}
+          <ConnectButton showBalance={false} chainStatus="icon" />
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-[170px_minmax(0,1fr)_150px]">
+        <label className="flex flex-col gap-1.5">
+          <span className="label">Task type</span>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as TaskType)}
+            className="field"
+          >
+            {TYPES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="label">Payload</span>
+          <textarea
+            value={payload}
+            onChange={(e) => setPayload(e.target.value)}
+            placeholder="What should the agents work on?"
+            rows={2}
+            className="field resize-none"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="label">Reward (MON)</span>
+          <input
+            value={reward}
+            onChange={(e) => setReward(e.target.value)}
+            inputMode="decimal"
+            className="field font-mono"
+            placeholder="0.01"
+          />
+        </label>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="text-[11px] text-mute">
+          The next idle worker claims it automatically.
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {hash ? (
+            <span className="text-xs text-mute">
+              {isSuccess ? "posted ✓ " : "pending "}
+              <TxLink hash={hash} />
+            </span>
+          ) : null}
+          {error ? (
+            <span className="max-w-xs truncate text-xs text-bad">{error.message.split("\n")[0]}</span>
+          ) : null}
+
+          {wrongChain ? (
+            <button
+              onClick={() => switchChain({ chainId: 10143 })}
+              className="rounded-lg border border-wrk2/50 bg-wrk2/10 px-4 py-2 text-sm text-wrk2 transition hover:bg-wrk2/20"
+            >
+              Switch to Monad Testnet
+            </button>
+          ) : (
+            <button onClick={hire} disabled={!canPost || isPending || confirming} className="btn-primary">
+              {isPending ? "confirm in wallet…" : confirming ? "posting…" : "Hire the mesh"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -11,6 +11,13 @@ const STATUS_STYLE: Record<string, string> = {
   Refunded: "border-bad/40 bg-bad/10 text-bad",
 };
 
+const STATUS_DOT: Record<string, string> = {
+  Open: "bg-monad",
+  Claimed: "bg-wrk2",
+  Completed: "bg-pay",
+  Refunded: "bg-bad",
+};
+
 export default function TaskBoard({
   tasks,
   nameOf,
@@ -18,40 +25,65 @@ export default function TaskBoard({
   tasks: Record<number, TaskView>;
   nameOf: (addr?: string) => string;
 }) {
-  const list = Object.values(tasks).sort((a, b) => b.id - a.id).slice(0, 10);
+  const list = Object.values(tasks)
+    .sort((a, b) => b.id - a.id)
+    .slice(0, 10);
+
+  if (list.length === 0) {
+    return (
+      <div className="card flex min-h-[160px] items-center justify-center p-4 text-sm text-mute">
+        no tasks yet
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2">
-      {list.length === 0 ? <div className="rounded-lg border border-edge bg-panel p-4 text-sm text-mute">no tasks yet</div> : null}
       {list.map((t) => {
-        const { type } = stripType(t.prompt);
+        const { type, payload } = stripType(t.prompt);
+        const style = STATUS_STYLE[t.status] ?? "border-edge bg-void/40 text-mute";
+        const dot = STATUS_DOT[t.status] ?? "bg-mute";
         return (
-          <div key={`${t.id}-${t.status}`} className="animate-rise rounded-lg border border-edge bg-panel p-3">
+          <article
+            key={`${t.id}-${t.status}`}
+            className="card animate-rise p-3 transition-colors hover:border-edge"
+          >
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm text-ink">#{t.id}</span>
-                <span className="rounded border border-edge px-1.5 py-0.5 text-[10px] text-mute">{type}</span>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="font-mono text-sm font-semibold text-ink">#{t.id}</span>
+                <span className="chip truncate">{type}</span>
               </div>
-              <span className={`rounded border px-2 py-0.5 text-[10px] ${STATUS_STYLE[t.status]}`}>{t.status}</span>
-            </div>
-
-            <div className="mt-1 flex items-center justify-between text-xs text-mute">
-              <span className="truncate">
-                {nameOf(t.requester)} → {t.worker ? nameOf(t.worker) : "…"}
+              <span
+                className={`flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium ${style}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+                {t.status}
               </span>
-              <span className="font-mono text-ink">{fmtMon(t.reward)} MON</span>
             </div>
 
-            {t.result ? (
-              <div className="mt-2 line-clamp-2 text-xs text-mute">{t.result}</div>
-            ) : null}
-
-            <div className="mt-2 flex flex-wrap gap-3 text-[11px]">
-              {t.createTx ? <TxLink hash={t.createTx} label="create" /> : null}
-              {t.claimTx ? <TxLink hash={t.claimTx} label="claim" /> : null}
-              {t.completeTx ? <TxLink hash={t.completeTx} label="complete" /> : null}
+            <div className="mt-2 flex items-baseline justify-between gap-2">
+              <span className="min-w-0 truncate text-[11px] text-mute">
+                {nameOf(t.requester)}
+                <span className="mx-1 text-mute/50">→</span>
+                <span className={t.worker ? "text-ink/80" : "text-mute/60"}>
+                  {t.worker ? nameOf(t.worker) : "unclaimed"}
+                </span>
+              </span>
+              <span className="shrink-0 font-mono text-sm tabular-nums text-ink">
+                {fmtMon(t.reward)} <span className="text-[10px] text-mute">MON</span>
+              </span>
             </div>
-          </div>
+
+            <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-mute/90">
+              {t.status === "Completed" && t.result ? t.result : payload}
+            </p>
+
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {t.createTx ? <TxLink hash={t.createTx} label="create" className="tx-chip" /> : null}
+              {t.claimTx ? <TxLink hash={t.claimTx} label="claim" className="tx-chip" /> : null}
+              {t.completeTx ? <TxLink hash={t.completeTx} label="pay" className="tx-chip" /> : null}
+            </div>
+          </article>
         );
       })}
     </div>

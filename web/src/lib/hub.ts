@@ -19,6 +19,20 @@ const BACKFILL = 300n; // ≈ 2 minutes of history for the terminal on page load
 const FEED_CAP = 300;
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+/** Public RPC occasionally answers 429; retry a few times with a short backoff. */
+async function retry<T>(fn: () => Promise<T>, attempts = 4): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      last = e;
+      await sleep(350 * (i + 1));
+    }
+  }
+  throw last;
+}
+
 // ───────────────────────── types ─────────────────────────
 export type HubEventName =
   | "AgentRegistered" | "TaskCreated" | "TaskClaimed"
@@ -82,21 +96,32 @@ async function fetchLogs(fromBlock: bigint, toBlock: bigint) {
 type HubLog = Awaited<ReturnType<typeof fetchLogs>>[number];
 
 async function hydrateTasks(): Promise<Record<number, TaskView>> {
-  const count = await publicClient.readContract({ address: HUB, abi: a2aHubAbi, functionName: "taskCount" });
-  const ids: bigint[] = [];
-  for (let i = count; i >= 1n && ids.length < 12; i--) ids.push(i);
-  const rows = await Promise.all(
-    ids.map((id) => publicClient.readContract({ address: HUB, abi: a2aHubAbi, functionName: "tasks", args: [id] })),
+  const count = await retry(() =>
+    publicClient.readContract({ address: HUB, abi: a2aHubAbi, functionName: "taskCount" }),
   );
+  const ids: bigint[] = [];
+  for (let i = count; i >= 1n && ids.length < 10; i--) ids.push(i);
+
   const out: Record<number, TaskView> = {};
-  for (const r of rows) {
-    const [id, requester, worker, reward, , deadline, status, prompt, result] = r;
-    out[Number(id)] = {
-      id: Number(id), requester, reward, deadline: Number(deadline),
-      worker: worker === zeroAddress ? undefined : worker,
-      status: TASK_STATUS[status] ?? "Open",
-      prompt, result: result || undefined,
-    };
+  for (let i = 0; i < ids.length; i += 3) {
+    const chunk = ids.slice(i, i + 3);
+    const rows = await Promise.all(
+      chunk.map((id) =>
+        retry(() =>
+          publicClient.readContract({ address: HUB, abi: a2aHubAbi, functionName: "tasks", args: [id] }),
+        ).catch(() => null),
+      ),
+    );
+    for (const r of rows) {
+      if (!r) continue;
+      const [id, requester, worker, reward, , deadline, status, prompt, result] = r;
+      out[Number(id)] = {
+        id: Number(id), requester, reward, deadline: Number(deadline),
+        worker: worker === zeroAddress ? undefined : worker,
+        status: TASK_STATUS[status] ?? "Open",
+        prompt, result: result || undefined,
+      };
+    }
   }
   return out;
 }
@@ -175,23 +200,30 @@ export function useHubFeed(): HubState {
     };
 
     (async () => {
-      let cursor = 0n;
-      try {
-        const head0 = await publicClient.getBlockNumber({ cacheTime: 0 });
-        const tasks = await hydrateTasks();
-        if (stop) return;
-        setState((s) => ({ ...s, ready: true, head: head0, tasks }));
-        cursor = head0 > BACKFILL ? head0 - BACKFILL : 0n;
-      } catch (e) {
-        if (!stop) setState((s) => ({ ...s, error: String((e as Error).message ?? e).split("\n")[0] }));
-        return;
+      const message = (e: unknown) => String((e as Error).message ?? e).split("\n")[0];
+
+      let headStart: bigint | undefined;
+      while (!stop && headStart === undefined) {
+        try {
+          headStart = await retry(() => publicClient.getBlockNumber({ cacheTime: 0 }));
+        } catch (e) {
+          if (!stop) setState((s) => ({ ...s, error: message(e) }));
+          await sleep(1200);
+        }
       }
+      if (stop || headStart === undefined) return;
+
+      let cursor = headStart > BACKFILL ? headStart - BACKFILL : 0n;
+      const tasks = await hydrateTasks().catch(() => ({} as Record<number, TaskView>));
+      if (stop) return;
+      setState((s) => ({ ...s, ready: true, head: headStart!, tasks, error: undefined }));
+
       while (!stop) {
         try {
-          const head = await publicClient.getBlockNumber({ cacheTime: 0 });
+          const head = await retry(() => publicClient.getBlockNumber({ cacheTime: 0 }));
           while (cursor <= head && !stop) {
             const to = cursor + MAX_RANGE < head ? cursor + MAX_RANGE : head;
-            push(await fetchLogs(cursor, to));
+            push(await retry(() => fetchLogs(cursor, to)));
             cursor = to + 1n;
           }
           if (!stop) setState((s) => (s.head === head ? s : { ...s, head, error: undefined }));

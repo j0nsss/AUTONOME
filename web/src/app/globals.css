@@ -9,9 +9,16 @@ body {
 
 body {
   background-color: #07060d;
+  background-image: radial-gradient(1100px 520px at 50% -12%, rgba(131, 110, 249, 0.14), transparent 62%);
+  background-repeat: no-repeat;
   color: #e7e5f4;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(131, 110, 249, 0.35);
+  color: #fff;
 }
 
 .font-mono,
@@ -49,6 +56,32 @@ kbd {
 
 *::-webkit-scrollbar-track {
   background: transparent;
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-edge/80 bg-panel/70;
+  }
+
+  .label {
+    @apply text-[10px] font-medium uppercase tracking-[0.16em] text-mute;
+  }
+
+  .field {
+    @apply w-full rounded-lg border border-edge bg-void/70 px-3 py-2 text-sm text-ink outline-none transition placeholder:text-mute/70 focus:border-monad/60 focus:ring-2 focus:ring-monad/20;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-monad/50 bg-monad/20 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-monad/30 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-md border border-edge/70 bg-void/40 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-mute;
+  }
+
+  .tx-chip {
+    @apply inline-flex items-center gap-1 rounded-md border border-edge/70 bg-void/40 px-1.5 py-0.5 font-mono text-[10px] text-monad/90 transition hover:border-monad/50 hover:bg-monad/10 hover:text-monad;
+  }
 }
 
 @layer utilities {
