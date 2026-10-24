@@ -1,0 +1,30 @@
+{
+  "name": "autonome",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "sync": "bash scripts/sync-shared.sh",
+    "contracts:test": "cd contracts && forge test -vv",
+    "contracts:deploy": "bash scripts/deploy.sh",
+    "preflight": "npm --prefix agents run preflight",
+    "demo:up": "concurrently -k -n WEB,W1,W2 -c magenta,green,yellow \"npm --prefix web run dev\" \"npm --prefix agents run worker -- 1\" \"npm --prefix agents run worker -- 2\"",
+    "demo:go": "npm --prefix agents run requester -- burst 5",
+    "demo:auto": "npm --prefix agents run requester -- loop"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/j0nsss/AUTONOME.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/j0nsss/AUTONOME/issues"
+  },
+  "homepage": "https://github.com/j0nsss/AUTONOME#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.5"
+  }
+}
