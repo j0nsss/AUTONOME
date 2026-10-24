@@ -16,7 +16,7 @@ const CAPS = (process.env[`WORKER_${id}_CAPS`] ?? ALL_TYPES.join(","))
   .split(",").map((s) => s.trim()).filter(Boolean) as TaskType[];
 const log = makeLogger(NAME.toUpperCase(), id === "1" ? COLORS.green : COLORS.yellow);
 
-const MAX_IN_FLIGHT = 2;
+const MAX_IN_FLIGHT = 1;
 const MIN_REWARD = parseEther(env.minRewardMon);
 const seen = new Set<string>();
 let inFlight = 0;
@@ -87,14 +87,18 @@ async function main() {
   });
 
   // 2) catch-up: pick up still-open tasks created before we started
-  const total = await publicClient.readContract({ address: env.hub, abi: a2aHubAbi, functionName: "taskCount" });
-  const lowest = total > 15n ? total - 14n : 1n;
-  for (let i = total; i >= lowest; i--) {
-    const t = await publicClient.readContract({
-      address: env.hub, abi: a2aHubAbi, functionName: "tasks", args: [i],
-    });
-    const [, requester, , reward, , deadline, status, prompt] = t;
-    if (status === 0) void handleTask(i, requester, prompt, reward, deadline); // 0 = Open
+  try {
+    const total = await publicClient.readContract({ address: env.hub, abi: a2aHubAbi, functionName: "taskCount" });
+    const lowest = total > 15n ? total - 14n : 1n;
+    for (let i = total; i >= lowest; i--) {
+      const t = await publicClient.readContract({
+        address: env.hub, abi: a2aHubAbi, functionName: "tasks", args: [i],
+      });
+      const [, requester, , reward, , deadline, status, prompt] = t;
+      if (status === 0) void handleTask(i, requester, prompt, reward, deadline); // 0 = Open
+    }
+  } catch (e) {
+    log.warn(`catch-up skipped: ${shortErr(e)}`);
   }
 
   log.info("listening for tasks…");
