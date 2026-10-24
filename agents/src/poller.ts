@@ -25,7 +25,20 @@ export async function pollHubEvents(
   onEvent: (e: HubEvent) => void | Promise<void>,
   opts: { startBlock?: bigint; intervalMs?: number } = {},
 ): Promise<never> {
-  let cursor = opts.startBlock ?? (await publicClient.getBlockNumber({ cacheTime: 0 }));
+  let cursor: bigint;
+  if (opts.startBlock !== undefined) {
+    cursor = opts.startBlock;
+  } else {
+    for (;;) {
+      try {
+        cursor = await publicClient.getBlockNumber({ cacheTime: 0 });
+        break;
+      } catch (err) {
+        console.error("[poller] head error (will retry):", (err as Error).message?.split("\n")[0]);
+        await sleep(opts.intervalMs ?? env.pollMs);
+      }
+    }
+  }
   const interval = opts.intervalMs ?? env.pollMs;
 
   for (;;) {

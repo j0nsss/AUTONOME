@@ -29,12 +29,16 @@ async function main() {
   log.info(`online as ${account.address} · balance ${formatEther(bal)} MON · caps=[${CAPS.join(",")}]`);
   if (bal < parseEther("0.02")) log.warn("low balance — need a little MON for gas (`npm run fund`)");
 
-  const profile = await publicClient.readContract({
-    address: env.hub, abi: a2aHubAbi, functionName: "agents", args: [account.address],
-  });
-  if (profile[0] === "") {
-    const { hash } = await sendAndWait("registerAgent", [NAME, "worker"]);
-    log.ok(`registered as "${NAME}" · ${txUrl(hash)}`);
+  try {
+    const profile = await publicClient.readContract({
+      address: env.hub, abi: a2aHubAbi, functionName: "agents", args: [account.address],
+    });
+    if (profile[0] === "") {
+      const { hash } = await sendAndWait("registerAgent", [NAME, "worker"]);
+      log.ok(`registered as "${NAME}" · ${txUrl(hash)}`);
+    }
+  } catch (e) {
+    log.warn(`registration skipped: ${shortErr(e)}`);
   }
 
   async function handleTask(taskId: bigint, requester: string, prompt: string, reward: bigint, deadline: bigint) {

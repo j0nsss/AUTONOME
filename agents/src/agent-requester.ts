@@ -30,12 +30,16 @@ async function main() {
   if (bal < parseEther("0.1")) log.warn("low balance — fund via https://faucet.monad.xyz or `npm run fund`");
 
   // 1) register identity (idempotent)
-  const profile = await publicClient.readContract({
-    address: env.hub, abi: a2aHubAbi, functionName: "agents", args: [account.address],
-  });
-  if (profile[0] === "") {
-    const { hash } = await sendAndWait("registerAgent", [NAME, "requester"]);
-    log.ok(`registered as "${NAME}" · ${txUrl(hash)}`);
+  try {
+    const profile = await publicClient.readContract({
+      address: env.hub, abi: a2aHubAbi, functionName: "agents", args: [account.address],
+    });
+    if (profile[0] === "") {
+      const { hash } = await sendAndWait("registerAgent", [NAME, "requester"]);
+      log.ok(`registered as "${NAME}" · ${txUrl(hash)}`);
+    }
+  } catch (e) {
+    log.warn(`registration skipped: ${shortErr(e)}`);
   }
 
   // 2) watch events for my tasks
